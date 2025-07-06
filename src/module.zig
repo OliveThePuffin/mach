@@ -1,6 +1,6 @@
 const std = @import("std");
 const mach = @import("main.zig");
-const StringTable = @import("StringTable.zig");
+const StringList = std.ArrayListUnmanaged([]const u8);
 const Graph = @import("graph.zig").Graph;
 
 /// An ID representing a mach object. This is an opaque identifier which effectively encodes:
@@ -17,13 +17,6 @@ const Graph = @import("graph.zig").Graph;
 pub const ObjectID = u64;
 
 const ObjectTypeID = u16;
-
-const PackedObjectTypeID = packed struct(u16) {
-    // 2^10 (1024) modules in an application
-    module_name_id: u10,
-    // 2^6 (64) lists of objects per module
-    object_name_id: u6,
-};
 
 pub const ObjectsOptions = struct {
     /// If set to true, Mach will track when fields are set using the setField/setAll
@@ -604,8 +597,7 @@ pub fn Modules(module_lists: anytype) type {
 
         mods: ModulesByName(modules),
 
-        module_names: StringTable = .{},
-        object_names: StringTable = .{},
+        object_names: StringList = .{},
         graph: Graph,
 
         /// Enum describing all declarations for a given comptime-known module.
@@ -648,16 +640,13 @@ pub fn Modules(module_lists: anytype) type {
                 // TODO(objects): module-state-init
                 const Mod2 = @TypeOf(@field(m.mods, field.name));
                 var mod: Mod2 = undefined;
-                const module_name_id = try m.module_names.indexOrPut(allocator, @tagName(Mod2.mach_module));
                 inline for (@typeInfo(@TypeOf(mod)).@"struct".fields) |mod_field| {
                     if (@typeInfo(mod_field.type) == .@"struct" and @hasDecl(mod_field.type, "IsMachObjects")) {
-                        const object_name_id = try m.object_names.indexOrPut(allocator, mod_field.name);
+                        try m.object_names.append(allocator, mod_field.name);
+                        const object_name_id = m.object_names.items.len - 1;
 
                         // TODO: use packed struct(TypeID) here. Same thing, just get the type from central location
-                        const object_type_id: u16 = @bitCast(PackedObjectTypeID{
-                            .module_name_id = @intCast(module_name_id),
-                            .object_name_id = @intCast(object_name_id),
-                        });
+                        const object_type_id: u16 = @intCast(object_name_id);
 
                         @field(mod, mod_field.name).internal = .{
                             .allocator = allocator,

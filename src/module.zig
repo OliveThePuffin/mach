@@ -894,6 +894,7 @@ fn ModuleTuple(comptime tuple: anytype) type {
 /// Given .{Foo, Bar, Baz} Mach modules, returns .{.foo = Foo, .bar = Bar, .baz = Baz} with field
 /// names corresponding to each module's `pub const mach_module = .foo;` name.
 fn ModuleTypesByName(comptime modules: anytype) type {
+    @setEvalBranchQuota(10_000);
     var fields: []const std.builtin.Type.StructField = &[0]std.builtin.Type.StructField{};
     for (modules) |M| {
         fields = fields ++ [_]std.builtin.Type.StructField{.{

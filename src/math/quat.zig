@@ -274,6 +274,27 @@ pub fn Quat(comptime Scalar: type) type {
                 return init(0, 0, 0, 0);
             }
         }
+
+        // Calculates the roll of a given quaternion in XYZ euler angles
+        pub inline fn roll(q: *const Quat(T)) T {
+            return math.atan2(
+                2 * (q.v.w() * q.v.z() + q.v.x() * q.v.y()),
+                1 - 2 * (q.v.y() * q.v.y() + q.v.z() * q.v.z()),
+            );
+        }
+
+        // Calculates the pitch of a given quaternion in XYZ euler angles
+        pub inline fn pitch(q: *const Quat(T)) T {
+            return math.atan2(
+                2 * (q.v.w() * q.v.x() + q.v.y() * q.v.z()),
+                1 - 2 * (q.v.x() * q.v.x() + q.v.y() * q.v.y()),
+            );
+        }
+
+        // Calculates the yaw of a given quaternion in XYZ euler angles
+        pub inline fn yaw(q: *const Quat(T)) T {
+            return math.asin(2 * (q.v.w() * q.v.y() - q.v.x() * q.v.z()));
+        }
     };
 }
 

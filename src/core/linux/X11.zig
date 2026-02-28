@@ -181,8 +181,6 @@ pub fn initWindow(
     _ = libx11.?.XSelectInput(x11.display, x11.window, set_window_attrs.event_mask);
     _ = libx11.?.XMapWindow(x11.display, x11.window);
 
-    //setDisplayMode(x11, core_window.display_mode, core_window.decorated);
-
     // TODO: see if this can be removed
     const backend_type = try Core.detectBackendType(core.allocator);
     switch (backend_type) {
@@ -704,9 +702,15 @@ fn processEvent(window_id: mach.ObjectID, event: *c.XEvent) void {
             {
                 core_window.width = @intCast(event.xconfigure.width);
                 core_window.height = @intCast(event.xconfigure.height);
+                core_window.framebuffer_width = core_window.width;
+                core_window.framebuffer_height = core_window.height;
+                core_window.swap_chain_descriptor.width = core_window.framebuffer_width;
+                core_window.swap_chain_descriptor.height = core_window.framebuffer_height;
 
                 // FIX: What is the Mach Object System way of doing this?
-                // core_ptr.swap_chain_update.set();
+                // core.swap_chain.update.set();
+
+                core_ptr.windows.setValue(window_id, core_window);
 
                 core_ptr.pushEvent(.{
                     .window_resize = .{
@@ -717,7 +721,6 @@ fn processEvent(window_id: mach.ObjectID, event: *c.XEvent) void {
                         .window_id = window_id,
                     },
                 });
-                core_ptr.windows.setValue(window_id, core_window);
             }
         },
         c.FocusIn => {

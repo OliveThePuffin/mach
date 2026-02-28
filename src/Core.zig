@@ -12,7 +12,7 @@ const EventQueue = std.fifo.LinearFifo(Event, .Dynamic);
 
 pub const mach_module = .mach_core;
 
-pub const mach_systems = .{ .main, .init, .tick, .presentFrame, .deinit };
+pub const mach_systems = .{ .main, .init, .tick, .presentFrame, .renewSwapChain, .deinit };
 
 // Set track_fields to true so that when these field values change, we know about it
 // and can update the platform windows.
@@ -248,6 +248,19 @@ pub fn presentFrame(core: *Core, core_mod: mach.Mod(Core)) !void {
         },
         .deinitializing => {},
         .exited => @panic("application not running"),
+    }
+    core_mod.call(.renewSwapChain);
+}
+
+pub fn renewSwapChain(core: *Core) !void {
+    var windows = core.windows.slice();
+    while (windows.next()) |window_id| {
+        var core_window = core.windows.getValue(window_id);
+        if (core_window.swap_chain.isStale()) {
+            core_window.swap_chain.destroy();
+            core_window.swap_chain = core_window.device.createSwapChain(core_window.surface, &core_window.swap_chain_descriptor);
+            core.windows.setValue(window_id, core_window);
+        }
     }
 }
 
